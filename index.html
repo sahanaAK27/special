@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Special Day!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Import Google Fonts for 'Inter' (default text) and 'Pacifico' (for decorative headings) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Pacifico&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Prevent scrollbars from animations */
+            /* Animated light green background gradient - this will be overridden by selected image */
+            background: linear-gradient(135deg, #e0f2f1, #e8f5e9, #c8e6c9, #a5d6a7);
+            background-size: 400% 400%; /* Larger than viewport for animation */
+            animation: gradient-shift 15s ease infinite alternate; /* Smooth, looping background animation */
+            color: #2e7d32; /* Darker green text for contrast */
+            /* New: Background image styles, will be applied via JS */
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-size: cover;
+        }
+
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Base styling for all stages to manage visibility */
+        .stage {
+            display: none; /* All stages are hidden by default */
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+            pointer-events: none; /* Not interactive when hidden */
+            /* Ensure stages fill the screen and are centered */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            flex-direction: column; /* Stack content vertically */
+            align-items: center; /* Center horizontally */
+            justify-content: center; /* Center vertically */
+            text-align: center; /* Center text within stages */
+        }
+
+        .stage.active {
+            display: flex; /* Show active stage */
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all; /* Interactive when active */
+        }
+
+        /* Message Card General Styling */
+        .message-card {
+            background-color: rgba(255, 255, 255, 0.85); /* Slightly transparent white */
+            backdrop-filter: blur(8px); /* Frosted glass effect */
+            border-radius: 2rem; /* More rounded corners */
+            padding: 2.5rem;
+            max-width: 32rem; /* Max width for readability */
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); /* Soft shadow */
+            border: 1px solid rgba(255,255,255,0.4); /* Subtle border */
+            text-align: center; /* This centers inline-level content within the card */
+        }
+
+        /* Custom Button Styles */
+        .action-button {
+            @apply bg-green-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105 active:scale-95;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+        }
+
+        .choice-button {
+            @apply bg-green-100 text-green-800 font-semibold py-2 px-5 rounded-full border border-green-300 hover:bg-green-200 transition-colors duration-200 cursor-pointer;
+        }
+
+        .choice-button.selected {
+            @apply bg-green-600 text-white border-green-600 shadow-md;
+        }
+
+        /* Gift Box Styling */
+        .gift-box {
+            position: relative;
+            width: 180px;
+            height: 140px;
+            background-color: #66BB6A; /* Light green gift color */
+            border-radius: 12px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.25), inset 0 -7px 0 rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: transform 0.3s ease-in-out, opacity 0.5s ease-out;
+            transform-style: preserve-3d;
+            perspective: 1000px;
+            z-index: 10;
+        }
+
+        .gift-box:hover {
+            transform: scale(1.08) rotateY(5deg);
+        }
+
+        .gift-ribbon-vertical {
+            position: absolute;
+            width: 35px;
+            height: 100%;
+            background-color: #FFEB3B; /* Yellow ribbon */
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.2);
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 3px;
+        }
+
+        .gift-ribbon-horizontal {
+            position: absolute;
+            width: 100%;
+            height: 35px;
+            background-color: #FFEB3B;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.2);
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 3px;
+        }
+
+        .gift-lid {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            height: 50px; /* Lid height */
+            background-color: #81C784; /* Slightly lighter green for lid */
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 7px 15px rgba(0,0,0,0.3);
+            transform-origin: bottom center;
+            transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Springy open */
+            z-index: 1;
+        }
+
+        .gift-bow {
+            position: absolute;
+            width: 60px;
+            height: 25px;
+            background-color: #FFD600; /* Brighter yellow for bow */
+            border-radius: 50%;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Gift box open animation */
+        .gift-box.open {
+            opacity: 0;
+            transform: scale(0.6);
+            pointer-events: none;
+        }
+
+        .gift-lid.open {
+            transform: rotateX(100deg) translateY(-30px) translateZ(50px); /* Flips open and moves up */
+        }
+
+        /* Confetti / Petal styling for final reveal */
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            border-radius: 50%; /* Most confetti are round */
+            animation: confetti-fall linear forwards;
+        }
+
+        .petal {
+            border-radius: 0%; /* Square for petals */
+            transform: rotate(45deg); /* Diamond shape for petals */
+        }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotateZ(0deg) scale(1); opacity: 0; }
+            10% { opacity: 0.9; }
+            100% { transform: translateY(100vh) rotateZ(720deg) scale(0.5); opacity: 0; }
+        }
+
+        /* Cake Styling (simple SVG) */
+        .cake-svg {
+            margin-top: 2rem;
+            width: 100%;
+            max-width: 250px;
+            height: auto;
+            transform: scale(0); /* Hidden initially */
+            opacity: 0;
+            transition: transform 0.8s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.5s ease-out;
+        }
+
+        .cake-svg.revealed {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* Balloon Styling (CSS based, will be generated by JS) */
+        .balloon {
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), transparent), var(--balloon-color);
+            bottom: -100px; /* Start off-screen */
+            animation: float-up 10s ease-out forwards;
+            filter: drop-shadow(3px 3px 3px rgba(0,0,0,0.2));
+            z-index: 990;
+        }
+
+        .balloon::before {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 10px;
+            height: 10px;
+            background-color: inherit;
+            border-radius: 50% 50% 50% 50% / 0% 0% 100% 100%;
+        }
+
+        .balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 30px;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        @keyframes float-up {
+            0% { bottom: -100px; opacity: 0.5; }
+            100% { bottom: calc(100% + 100px); opacity: 0; transform: translateX(var(--float-x)) translateY(var(--float-y)); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 relative text-center">
+
+    <div class="confetti-container" id="confetti-container"></div>
+
+    <div id="stage1" class="stage">
+        <div class="message-card">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-6 font-['Pacifico']">Hey, it's your day!</h1>
+            <p class="text-xl md:text-2xl mb-8 font-semibold">Want to see the surprise?</p>
+            <button id="surprise-button" class="action-button">Yes, let's go!</button>
+        </div>
+    </div>
+
+    <div id="stage2" class="stage">
+        <div class="message-card">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-6 font-['Pacifico']">Please open the box!</h1>
+            <p class="text-lg md:text-xl mb-8 font-semibold text-gray-700">Click on the gift below...</p>
+            <div id="gift-box" class="gift-box mx-auto">
+                <div class="gift-ribbon-vertical"></div>
+                <div class="gift-ribbon-horizontal"></div>
+                <div class="gift-lid">
+                    <div class="gift-bow"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="stage3" class="stage">
+        <div class="message-card">
+            <h1 class="text-3xl md:text-4xl font-extrabold mb-6 font-['Pacifico']">Time for some choices!</h1>
+
+            <div class="mb-6 hidden"> <p class="text-lg md:text-xl font-semibold mb-3">Your favorite music:</p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button class="choice-button" data-type="music" data-value="upbeat">Upbeat Pop</button>
+                    <button class="choice-button" data-type="music" data-value="calm">Calm & Chill</button>
+                    <button class="choice-button" data-type="music" data-value="classical">Classical</button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <p class="text-lg md:text-xl font-semibold mb-3">Balloon Color:</p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button class="choice-button" data-type="balloon" data-value="#A78BFA">Purple</button>
+                    <button class="choice-button" data-type="balloon" data-value="#FBCFE8">Pink</button>
+                    <button class="choice-button" data-type="balloon" data-value="#6EE7B7">Mint Green</button>
+                    <button class="choice-button" data-type="balloon" data-value="#FCD34D">Yellow</button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <p class="text-lg md:text-xl font-semibold mb-3">Cake Flavor:</p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button class="choice-button" data-type="cake" data-value="chocolate">Chocolate</button>
+                    <button class="choice-button" data-type="cake" data-value="vanilla">Vanilla</button>
+                    <button class="choice-button" data-type="cake" data-value="strawberry">Strawberry</button>
+                    <button class="choice-button" data-type="cake" data-value="lemon">Lemon</button>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <p class="text-lg md:text-xl font-semibold mb-3">Choose a background image:</p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button class="choice-button" data-type="background" data-value="https://picsum.photos/id/1018/1200/800" data-name="Forest Path">Forest Path</button>
+                    <button class="choice-button" data-type="background" data-value="https://picsum.photos/id/1040/1200/800" data-name="Sunset Lake">Sunset Lake</button>
+                    <button class="choice-button" data-type="background" data-value="https://picsum.photos/id/1050/1200/800" data-name="City Lights">City Lights</button>
+                    <button class="choice-button" data-type="background" data-value="https://picsum.photos/id/1069/1200/800" data-name="Mountain View">Mountain View</button>
+                </div>
+            </div>
+
+
+            <button id="next-choices-button" class="action-button opacity-50 cursor-not-allowed" disabled>See the magic!</button>
+        </div>
+    </div>
+
+    <div id="stage4" class="stage">
+        <div class="message-card">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 font-['Pacifico'] text-green-900">Happy Birthday!</h1>
+
+            <p class="text-xl md:text-2xl mb-4 font-semibold text-green-800">
+                Admin
+            </p>
+
+            <div class="bg-green-50 bg-opacity-70 rounded-xl p-4 mb-6 shadow-inner border border-green-200 text-gray-800 text-sm md:text-base">
+                <p class="mb-1">Your balloon color: <span id="selected-balloon" class="font-bold"></span></p>
+                <p class="mb-1">Your cake flavor: <span id="selected-cake" class="font-bold"></span></p>
+                <p>Your background image: <span id="selected-background" class="font-bold"></span></p>
+            </div>
+
+            <svg id="cake-display" class="cake-svg mx-auto" viewBox="0 0 200 180">
+                <rect x="50" y="100" width="100" height="40" rx="5" ry="5" fill="#FCE4EC" stroke="#EF9A9A" stroke-width="2"/>
+                <rect x="60" y="70" width="80" height="30" rx="5" ry="5" fill="#F8BBD0" stroke="#F48FB1" stroke-width="2"/>
+                <rect x="70" y="40" width="60" height="30" rx="5" ry="5" fill="#FCE4EC" stroke="#EF9A9A" stroke-width="2"/>
+
+                <path d="M 50 100 C 60 95 140 95 150 100 L 150 105 C 140 100 60 100 50 105 Z" fill="#FFEB3B"/>
+                <path d="M 60 70 C 70 65 130 65 140 70 L 140 75 C 130 70 70 70 60 75 Z" fill="#FFEB3B"/>
+                <path d="M 70 40 C 80 35 120 35 130 40 L 130 45 C 120 40 80 40 70 45 Z" fill="#FFEB3B"/>
+
+                <rect x="98" y="25" width="4" height="15" fill="#FFC107"/>
+                <circle cx="100" cy="23" r="3" fill="#FF5722"/> </svg>
+
+            <p class="text-lg md:text-xl font-medium leading-relaxed text-gray-900 mt-6">
+                May your special day be filled with all the joy you've chosen, and many more wonderful moments to come!
+            </p>
+
+            <p class="text-xl md:text-2xl font-bold mt-8 text-green-800">
+                With all my love,
+            </p>
+            <p class="text-2xl md:text-3xl font-extrabold text-lime-600 font-['Pacifico']">
+            Chotea
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const stages = {
+            stage1: document.getElementById('stage1'),
+            stage2: document.getElementById('stage2'),
+            stage3: document.getElementById('stage3'),
+            stage4: document.getElementById('stage4')
+        };
+        const surpriseButton = document.getElementById('surprise-button');
+        const giftBox = document.getElementById('gift-box');
+        const giftLid = giftBox.querySelector('.gift-lid');
+        const choiceButtons = document.querySelectorAll('.choice-button');
+        const nextChoicesButton = document.getElementById('next-choices-button');
+        const confettiContainer = document.getElementById('confetti-container');
+        const cakeDisplay = document.getElementById('cake-display');
+
+        // Store user selections
+        let selections = {
+            music: 'N/A', // Default to N/A since music choice is removed
+            balloon: '',
+            cake: '',
+            background: '' // New: For background image URL
+        };
+        let currentActiveStage = 'stage1';
+
+        // --- Utility Functions ---
+
+        /**
+         * Switches the active stage displayed on the page.
+         * @param {string} newStageId The ID of the stage to make active.
+         */
+        function switchStage(newStageId) {
+            // Deactivate current stage
+            stages[currentActiveStage].classList.remove('active');
+            // Activate new stage
+            stages[newStageId].classList.add('active');
+            currentActiveStage = newStageId;
+        }
+
+        /**
+         * Creates and animates confetti/petal particles.
+         * @param {string} type 'confetti' or 'petal' for different shapes.
+         */
+        function createConfetti(type = 'confetti') {
+            const colors = [
+                '#81c784', '#a5d6a7', '#4CAF50', '#66BB6A', '#D4E157', '#FFEE58',
+                '#A1887F', '#BCAAA4', '#81D4FA', '#90CAF9', '#FFD180', '#FF8A65' // Added warmer tones
+            ];
+            const numberOfParticles = 80;
+
+            for (let i = 0; i < numberOfParticles; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('confetti');
+                if (type === 'petal') {
+                    particle.classList.add('petal');
+                    particle.style.width = '12px';
+                    particle.style.height = '12px';
+                }
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.animationDuration = (Math.random() * 2 + 4) + 's'; // Longer duration
+                particle.style.animationDelay = Math.random() * 0.8 + 's';
+                confettiContainer.appendChild(particle);
+
+                particle.addEventListener('animationend', () => {
+                    particle.remove();
+                });
+            }
+        }
+
+        /**
+         * Creates and animates balloons floating up.
+         * @param {string} color The CSS color value for the balloon.
+         */
+        function createBalloons(color) {
+            const numBalloons = 15;
+            for (let i = 0; i < numBalloons; i++) {
+                const balloon = document.createElement('div');
+                balloon.classList.add('balloon');
+                balloon.style.setProperty('--balloon-color', color);
+                // Random starting X position
+                balloon.style.left = (Math.random() * 80 + 10) + 'vw';
+                // Random horizontal drift during animation
+                balloon.style.setProperty('--float-x', (Math.random() * 200 - 100) + 'px');
+                // Random vertical drift
+                balloon.style.setProperty('--float-y', (Math.random() * 100 - 50) + 'px');
+                balloon.style.animationDelay = (Math.random() * 2) + 's'; // Staggered start
+                confettiContainer.appendChild(balloon); // Using confetti container as a general animation layer
+
+                balloon.addEventListener('animationend', () => {
+                    balloon.remove();
+                });
+            }
+        }
+
+        /**
+         * Updates the cake SVG colors based on selected flavor.
+         * @param {string} flavor The selected cake flavor.
+         */
+        function updateCakeDisplay(flavor) {
+            const cakeLayers = cakeDisplay.querySelectorAll('rect');
+            const frostingPaths = cakeDisplay.querySelectorAll('path:not([fill="#FFC107"])'); // Exclude candle flame
+
+            let cakeColor, frostingColor;
+
+            switch (flavor) {
+                case 'chocolate':
+                    cakeColor = '#8B4513'; // SaddleBrown
+                    frostingColor = '#A0522D'; // Sienna
+                    break;
+                case 'vanilla':
+                    cakeColor = '#FFFACD'; // LemonChiffon
+                    frostingColor = '#F5DEB3'; // Wheat
+                    break;
+                case 'strawberry':
+                    cakeColor = '#FFC0CB'; // Pink
+                    frostingColor = '#F08080'; // LightCoral
+                    break;
+                case 'lemon':
+                    cakeColor = '#FFFACD'; // LemonChiffon
+                    frostingColor = '#FFD700'; // Gold
+                    break;
+                default:
+                    cakeColor = '#FCE4EC'; // Default light pink
+                    frostingColor = '#FFEB3B'; // Default yellow
+            }
+
+            cakeLayers.forEach(layer => layer.setAttribute('fill', cakeColor));
+            frostingPaths.forEach(path => path.setAttribute('fill', frostingColor));
+
+            // Reveal the cake with animation
+            cakeDisplay.classList.add('revealed');
+        }
+
+        // --- Event Listeners ---
+
+        // Stage 1: "Yes, let's go!" button click
+        surpriseButton.addEventListener('click', () => {
+            switchStage('stage2');
+        });
+
+        // Stage 2: Gift box click
+        giftBox.addEventListener('click', () => {
+            // Animate gift box opening
+            giftLid.classList.add('open');
+            giftBox.classList.add('open');
+
+            // After animation, switch to choices stage
+            setTimeout(() => {
+                switchStage('stage3');
+            }, 900); // Matches gift-lid transition time + slight buffer
+        });
+
+        // Stage 3: Choice buttons (balloon, cake, background)
+        choiceButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const type = button.dataset.type;
+                const value = button.dataset.value;
+                const name = button.dataset.name || value; // Get the name for display, or use value
+
+                // Remove 'selected' from other buttons of the same type
+                document.querySelectorAll(`.choice-button[data-type="${type}"]`).forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+
+                // Add 'selected' to the clicked button
+                button.classList.add('selected');
+                selections[type] = value; // Store the selection (URL for background)
+                if (type === 'background') {
+                    selections.backgroundName = name; // Store the readable name for background
+                }
+
+
+                // Check if all *required* choices are made to enable the "Next" button
+                // Now we need balloon, cake, and background to be selected
+                if (selections.balloon && selections.cake && selections.background) {
+                    nextChoicesButton.disabled = false;
+                    nextChoicesButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
+        });
+
+        // Stage 3: "See the magic!" button click
+        nextChoicesButton.addEventListener('click', () => {
+            if (nextChoicesButton.disabled) return; // Should not happen if button is enabled
+
+            // Update display with selected choices
+            document.getElementById('selected-balloon').textContent = selections.balloon.replace(/\b\w/g, char => char.toUpperCase());
+            // Convert hex color to a more readable name for display if possible, or just the hex
+            let balloonColorName = selections.balloon;
+            switch(selections.balloon) {
+                case '#A78BFA': balloonColorName = 'Purple'; break;
+                case '#FBCFE8': balloonColorName = 'Pink'; break;
+                case '#6EE7B7': balloonColorName = 'Mint Green'; break;
+                case '#FCD34D': balloonColorName = 'Yellow'; break;
+            }
+            document.getElementById('selected-balloon').textContent = balloonColorName;
+            document.getElementById('selected-cake').textContent = selections.cake.replace(/\b\w/g, char => char.toUpperCase());
+            document.getElementById('selected-background').textContent = selections.backgroundName;
+
+
+            // Apply selected background image
+            document.body.style.backgroundImage = `url('${selections.background}')`;
+            document.body.style.animation = 'none'; // Stop gradient animation once image is set
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center center';
+
+
+            // Animate balloons based on selected color
+            createBalloons(selections.balloon);
+
+            // Update and reveal cake based on selected flavor
+            updateCakeDisplay(selections.cake);
+
+            // Create confetti for the big reveal
+            createConfetti('petal'); // Using 'petal' type for a more organic feel
+
+            switchStage('stage4'); // Move to final reveal stage
+        });
+
+        // Initial setup on load to ensure only Stage 1 is visible
+        window.onload = () => {
+            switchStage('stage1'); // Ensure only the first stage is active on load
+        };
+    </script>
+</body>
+</html>
